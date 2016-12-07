@@ -46,41 +46,52 @@ public class DBUtil {
     {
         StringBuilder htmlTable = new StringBuilder();
         ResultSetMetaData metaData = results.getMetaData();
+       
         int columnCount = metaData.getColumnCount();
-        htmlTable.append("<table>\n");
+        htmlTable.append("<table class=")
+                .append("'").append("results")
+                .append("'").append(">\n");
         
         // add header row
-        htmlTable.append("<tr>");
+        htmlTable.append("\t<tr>\n");
         for (int i = 1; i <= columnCount; i++) {
-            htmlTable.append("<th>");
+            htmlTable.append("\t\t<th>");
             htmlTable.append(metaData.getColumnLabel(i));
-            htmlTable.append("</th>");
+            htmlTable.append("</th>\n");
         }
-        htmlTable.append("</tr>");
+        htmlTable.append("\t\t<th></th>\n");
+        htmlTable.append("\t</tr>\n");
         
+        int count = 0;
         // add all other rows
         while (results.next())
         {
-            htmlTable.append("<tr>");
+            htmlTable.append("\t<tr>\n");
             for (int i = 1; i <= columnCount; i++) {
-                htmlTable.append("<td>");
+                htmlTable.append("\t\t<td>");
                 htmlTable.append(results.getString(i));
-                htmlTable.append("</td>");
+                htmlTable.append("</td>\n");
             }
             String checkin = results.getString("Book Title");
-            htmlTable.append("<td>")
-                    .append("<form action=").append("'library'").append(">")
-                    .append("<input type=").append("'hidden'")
+            htmlTable.append("\t\t<td>\n")
+                    .append("\t\t\t<form action=").append("'library'").append(">\n")
+                    .append("\t\t\t\t<input type=").append("'hidden'")
                     .append(" name=").append("'").append("action")
                     .append("'").append(" value=")
-                    .append("'").append(checkin).append("'").append(">")
-                    .append("<input type=").append("'submit'")
-                    .append(" value=").append("'Check In'").append(">")
-                    .append("</form>").append("</td>").append("</tr>");
+                    .append("'").append(checkin).append("'").append(">\n")
+                    .append("\t\t\t\t<input type=").append("'submit'")
+                    .append(" value=").append("'Check In'").append(">\n")
+                    .append("\t\t\t</form>\n").append("\t\t</td>\n").append("\t</tr>\n");
+            count++;
         }
         
         htmlTable.append("</table>");
         DBUtil.closeResultSet(results);
+        
+        if(count == 0) {
+          return "<p>There are no currently no books in the library!</p>";
+        }
+        
         return htmlTable.toString();
     }    
     

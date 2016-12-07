@@ -1,29 +1,38 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.elon.LibraryDB;
-
 
 import java.util.Date;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.GregorianCalendar;
 
 /**
  * 
- * @author nyoung5
+ * @author Nathan Young
+ * @author Harrison Durant
+ * 
+ * Library database talks with the SQL database 
+ * Manages books, users and checkouts
  */
 public class LibraryDB {
   
-  
-  //TODO: Do the dates
+ /**
+ * Updates the table to check out a book
+ * @param user person checking out the book
+ * @param bookTitle title of the book to be checked out
+ * @return if checkout successful, emptystring, if unsuccessful, error message
+ */
   public static String checkout(User user, String bookTitle) {
         
-        if(!emailExists(user.getEmail())) {
+        User checkUser = getUser(user.getEmail());
+        if(checkUser == null) {
           insertUser(user);
+        }
+        else {
+          boolean duplicateFirst = !checkUser.getFirstName().equals(user.getFirstName());
+          boolean duplicateLast = !checkUser.getLastName().equals(user.getLastName());
+          if(duplicateFirst || duplicateLast) {
+            return "The information entered does not match the information"
+                    + " stored for user with email " + user.getEmail();
+          }
         }
         
         if(!bookExists(bookTitle)) {
@@ -59,16 +68,10 @@ public class LibraryDB {
             
             java.util.Date jdueDate = calendar.getTime();
             
-//    TEST        System.out.println("checkout date: " + jcheckoutDate.getTime());
-//            System.out.println("due date: " + jdueDate.getTime());
-            
             //create date based on miliseconds passed in from date
             java.sql.Date checkoutDate = new java.sql.Date(jcheckoutDate.getTime());
             java.sql.Date dueDate = new java.sql.Date(jdueDate.getTime());
            
-//    TEST        System.out.println("sql checkout date: " + checkoutDate);
-//            System.out.println("sql due date: " + dueDate);
-            
             ps.setDate(1, checkoutDate);
             ps.setDate(2, dueDate);
             ps.setString(3, user.getEmail());
@@ -86,22 +89,36 @@ public class LibraryDB {
         }
   }
 
-  public static boolean emailExists(String email) {
+  
+  /**
+   * Gets a user from the user table in the database
+   * @param email user email to search for in database
+   * @return User if user exists otherwise null
+   */
+  public static User getUser(String email) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
         PreparedStatement ps = null;
         ResultSet rs = null;
 
-        String query = "SELECT email FROM user "
+        String query = "SELECT first_name, "
+                + "last_name, email "
+                + "FROM user "
                 + "WHERE email = ?";
         try {
             ps = connection.prepareStatement(query);
             ps.setString(1, email);
             rs = ps.executeQuery();
-            return rs.next();
+            if(rs.next()) {
+              String first = rs.getString(1);
+              String last = rs.getString(2);
+              return new User(first,last,email);
+            } else {
+              return null;
+            }
         } catch (SQLException e) {
             System.out.println(e);
-            return false;
+            return null;
         } finally {
             DBUtil.closeResultSet(rs);
             DBUtil.closePreparedStatement(ps);
@@ -109,6 +126,12 @@ public class LibraryDB {
         }
     }
   
+  /**
+   * Checks if the book exists in database
+   * 
+   * @param bookTitle name of book to check if in database
+   * @return boolean stating if the book exists or not
+   */
   public static boolean bookExists(String bookTitle) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
@@ -132,6 +155,38 @@ public class LibraryDB {
         }
   }
   
+  public static String getDueDate(String bookTitle) {
+    ConnectionPool pool = ConnectionPool.getInstance();
+        Connection connection = pool.getConnection();
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        String query = "SELECT due_date FROM checkout "
+                + "WHERE book_name = ?";
+        try {
+            ps = connection.prepareStatement(query);
+            ps.setString(1, bookTitle);
+            rs = ps.executeQuery();
+            
+            if(rs.next()) {
+              return rs.getString(1);
+            } else {
+              return "";
+            }
+        } catch (SQLException e) {
+            System.out.println(e);
+            return "";
+        } finally {
+            DBUtil.closeResultSet(rs);
+            DBUtil.closePreparedStatement(ps);
+            pool.freeConnection(connection);
+        }
+  }
+    /**
+   * Checks to see if a book is checked out
+   * @param bookTitle book to check in database
+   * @return boolean representing whether or not the book is checked out 
+   */
   public static boolean isCheckedOut(String bookTitle) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
@@ -157,6 +212,10 @@ public class LibraryDB {
         }
     }
   
+ /**
+   * Checks in a book by deleting it from the database
+   * @param bookTitle the book to be checked in 
+   */
     public static void checkIn(String bookTitle) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
@@ -177,7 +236,11 @@ public class LibraryDB {
         }
     }
   
-  public static int insertBook(String bookTitle) {
+  /**
+   * Inserts book into the book table
+   * @param bookTitle title of book to be inserted
+   */
+  public static void insertBook(String bookTitle) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
         PreparedStatement ps = null;
@@ -190,17 +253,20 @@ public class LibraryDB {
             
             ps.setString(1, bookTitle);
 
-            return ps.executeUpdate();
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println(e);
-            return 0;
         } finally {
             DBUtil.closePreparedStatement(ps);
             pool.freeConnection(connection);
         }
     }
   
-  public static int insertUser(User user) {
+    /**
+   * Inserts a user into the database
+   * @param user user object to be inserted into database
+   */
+  public static void insertUser(User user) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
         PreparedStatement ps = null;
@@ -215,17 +281,20 @@ public class LibraryDB {
             ps.setString(2, user.getLastName());
             ps.setString(3, user.getEmail());
 
-            return ps.executeUpdate();
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println(e);
-            return 0;
         } finally {
             DBUtil.closePreparedStatement(ps);
             pool.freeConnection(connection);
         }
   }
 
-    public static int delete(User user) {
+   /**
+   * deletes a user from the database
+   * @param user user to be deleted
+   */
+    public static void delete(User user) {
         ConnectionPool pool = ConnectionPool.getInstance();
         Connection connection = pool.getConnection();
         PreparedStatement ps = null;
@@ -236,17 +305,19 @@ public class LibraryDB {
             ps = connection.prepareStatement(query);
             ps.setString(1, user.getEmail());
 
-            return ps.executeUpdate();
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println(e);
-            return 0;
         } finally {
             DBUtil.closePreparedStatement(ps);
             pool.freeConnection(connection);
         }
     }
     
-    
+/**
+ * Returns all the checked out books and people associated with them
+ * @return String with all the users in a table
+ */
  public static String getCheckouts() {
         // add code that returns an ArrayList<User> object of all users in the User table
         

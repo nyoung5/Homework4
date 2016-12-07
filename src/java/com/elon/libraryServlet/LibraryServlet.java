@@ -5,12 +5,8 @@ package com.elon.libraryServlet;
 
 import com.elon.LibraryDB.*;
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpSession;
@@ -20,6 +16,8 @@ import javax.servlet.http.HttpServletResponse;
 /**
  * @author harrisondurant
  * @author nathanyoung
+ * Controller for managing form actions 
+ * and getting responses from database classes
  */
 public class LibraryServlet extends HttpServlet {
   @Override
@@ -28,10 +26,9 @@ public class LibraryServlet extends HttpServlet {
             throws ServletException, IOException {
         
     String url = "/index.jsp";
-    String message = "";
     
     HttpSession session = request.getSession();
-    
+    //used for displaying year next to copyright
     GregorianCalendar currentDate = new GregorianCalendar();
     int currentYear = currentDate.get(Calendar.YEAR);
     request.setAttribute("currentYear", currentYear);
@@ -39,36 +36,32 @@ public class LibraryServlet extends HttpServlet {
     String action = request.getParameter("action");
     if (action != null) {
     
-      if (action.equals("checkout")) {
-          // get parameters from the request
+      if (action.equals("checkout")) { //just redirect to checkout page
         url = "/checkout.jsp";
-        
-        //String bookname = "";
-        //TODO get bookname request.getParameter(bookname)
-        
-        //User user = new User("Jeff", "Stein", "jstein@yahoo.com");
-        //LibraryDB.checkout(user, "Crafting Olympia");
-         
-        //LibraryDB.insert(user);
       }
-      else if(action.equals("manage")) {
+      else if(action.equals("manage")) { // create table and go to manage page
         String results = LibraryDB.getCheckouts();
         request.setAttribute("checkoutTable", results);
         url = "/manage.jsp";
       }
-      else if(action.equals("process_checkout")) {
+      else if(action.equals("process_checkout")) { //checks out book if not out
         String first = request.getParameter("firstname");
         String last = request.getParameter("lastname");
         String email = request.getParameter("email");
         String bookTitle = request.getParameter("title");
         User user = new User(first,last,email);
+        
+        session.setAttribute("user", user);
         String libraryResponse = LibraryDB.checkout(user,bookTitle);
         
-        if(libraryResponse.length() != 0) {
+        if(libraryResponse.length() != 0) { //If there's a problem print message
           request.setAttribute("message",libraryResponse);
           url = "/checkout.jsp";
         } 
-        else {
+        else { //otherwise bring user to thanks/success page
+          request.setAttribute("bookTitle", bookTitle);
+          String dueDate = LibraryDB.getDueDate(bookTitle);
+          request.setAttribute("dueDate",dueDate);
           url = "/thanks.jsp";
         }
       }
@@ -78,10 +71,6 @@ public class LibraryServlet extends HttpServlet {
         url = "/library?action=manage";
       }
     }
-    
-    
-    //request.setAttribute("message", message);
-    //request.setAttribute("investment", investment);
     
     getServletContext()
             .getRequestDispatcher(url)

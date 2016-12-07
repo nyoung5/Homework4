@@ -2,22 +2,23 @@
 @author Nathan Young and Harrison Durant
 */
 
-DROP DATABASE IF EXISTS library;
-CREATE DATABASE library;
+DROP DATABASE IF EXISTS testapplication;
+CREATE DATABASE testapplication;
+USE testapplication;
 
-CREATE TABLE library.book
+CREATE TABLE testapplication.book
 (
 book_name varchar(50) NOT NULL PRIMARY KEY
 );
 
-CREATE TABLE library.user
+CREATE TABLE testapplication.user
 (
 first_name varchar(50) NOT NULL,
 last_name varchar(50) NOT NULL,
 email varchar(50) NOT NULL PRIMARY KEY
 );
 
-CREATE TABLE library.checkout
+CREATE TABLE testapplication.checkout
 (
 checkout_date date NOT NULL,
 due_date date NOT NULL,
